@@ -26,8 +26,6 @@ export default class Tabs extends React.Component {
     this.onNavKeyDown = this.onNavKeyDown.bind(this);
     this.setActiveKey = this.setActiveKey.bind(this);
     this.getNextActiveKey = this.getNextActiveKey.bind(this);
-    // this.onTabClick = this.onTabClick.bind(this);
-    // this.onTabClick = this.onTabClick.bind(this);
 
     let activeKey;
     if ('activeKey' in props) {
@@ -122,9 +120,7 @@ export default class Tabs extends React.Component {
       [className]: !!className,
     });
 
-    // debugger;
     this.tabBar = renderTabBar();
-    // debugger;
     const contents = [
       React.cloneElement(this.tabBar, {
         prefixCls,
@@ -145,7 +141,6 @@ export default class Tabs extends React.Component {
         key: 'tabContent',
       }),
     ];
-    // debugger;
     if (tabBarPosition === 'bottom') {
       contents.reverse();
     }
