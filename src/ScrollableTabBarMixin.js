@@ -158,7 +158,8 @@ export default {
   },
 
   scrollToActiveTab() {
-    const { activeTab, navWrap } = this.refs;
+    const { navWrap } = this.refs;
+    const activeTab = this.activeTab;
     if (activeTab) {
       const activeTabWH = this.getOffsetWH(activeTab);
       const navWrapNodeWH = this.getOffsetWH(navWrap);
