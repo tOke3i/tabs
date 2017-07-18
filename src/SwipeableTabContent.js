@@ -1,5 +1,5 @@
 import TabContent from './TabContent';
-import React from 'react';
+import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import createReactClass from 'create-react-class';
 import Hammer from 'rc-hammerjs';
@@ -31,49 +31,28 @@ function computeIndex({
   return index;
 }
 
-function getIndexByDelta(e) {
-  const delta = isVertical(this.props.tabBarPosition) ? e.deltaY : e.deltaX;
-  const currentIndex = computeIndex({
-    maxIndex: this.maxIndex,
-    viewSize: this.viewSize,
-    startIndex: this.startIndex,
-    delta,
-  });
-  let showIndex = delta < 0 ? Math.floor(currentIndex + 1) : Math.floor(currentIndex);
-  if (showIndex < 0) {
-    showIndex = 0;
-  } else if (showIndex > this.maxIndex) {
-    showIndex = this.maxIndex;
-  }
-  if (this.children[showIndex].props.disabled) {
-    return undefined;
-  }
-  return currentIndex;
-}
 
-const SwipeableTabContent = createReactClass({
-  displayName: 'SwipeableTabContent',
 
-  propTypes: {
+export default class SwipeableTabContent extends Component {
+
+  static propTypes =  {
     tabBarPosition: PropTypes.string,
     onChange: PropTypes.func,
     children: PropTypes.any,
     hammerOptions: PropTypes.any,
     animated: PropTypes.bool,
     activeKey: PropTypes.string,
-  },
+  };
 
-  getDefaultProps() {
-    return {
-      animated: true,
-    };
-  },
+  static defaultProps = {
+    animated: true,
+  };
 
   componentDidMount() {
     this.rootNode = ReactDOM.findDOMNode(this);
-  },
+  }
 
-  onPanStart() {
+  handleStart = () => {
     const { tabBarPosition, children, activeKey, animated } = this.props;
     const startIndex = this.startIndex = getActiveIndex(children, activeKey);
     if (startIndex === -1) {
@@ -88,34 +67,66 @@ const SwipeableTabContent = createReactClass({
     this.viewSize = isVertical(tabBarPosition) ?
       this.rootNode.offsetHeight :
       this.rootNode.offsetWidth;
-  },
-  onPan(e) {
+  }
+  handleMove = (e) => {
+    const { tabBarPosition } = this.props;
     if (!this.startDrag) {
       return;
     }
-    const { tabBarPosition } = this.props;
-    const currentIndex = getIndexByDelta.call(this, e);
+    const currentIndex = this.getIndexByDelta(e);
+    console.log("move index: ", currentIndex);
     if (currentIndex !== undefined) {
       setTransform(this.rootNode.style, getTransformByIndex(currentIndex, tabBarPosition));
     }
-  },
-  onPanEnd(e) {
+  }
+  handleEnd = (e) => {
     if (!this.startDrag) {
       return;
     }
     this.end(e);
-  },
-  onSwipe(e) {
-    this.end(e, true);
-  },
+  }
 
-  end(e, swipe) {
+
+  getIndexByDelta = (e) => {
+    const { tabBarPosition } = this.props;
+    if (!e || !e.touches || !e.touches[0]) {
+      return;
+    }
+    const { clientX, clientY } = e.touches[0];
+    const nowClientPos = isVertical(tabBarPosition) ? clientY : clientX;
+    if (!this.preClientPos) {
+      this.delta = 0;
+      this.preClientPos = nowClientPos;
+    } else {
+      this.delta = nowClientPos - this.preClientPos;
+      this.preClientPos = nowClientPos;
+    }
+    console.log('delta: ', this.delta);
+    const currentIndex = computeIndex({
+      maxIndex: this.maxIndex,
+      viewSize: this.viewSize,
+      startIndex: this.startIndex,
+      delta: this.delta,
+    });
+    let showIndex = this.delta < 0 ? Math.floor(currentIndex + 1) : Math.floor(currentIndex);
+    if (showIndex < 0) {
+      showIndex = 0;
+    } else if (showIndex > this.maxIndex) {
+      showIndex = this.maxIndex;
+    }
+    if (this.children[showIndex].props.disabled) {
+      return undefined;
+    }
+    return currentIndex;
+  }
+  end = (e, swipe) => {
     const { tabBarPosition, animated } = this.props;
     this.startDrag = false;
     if (animated) {
       setTransition(this.rootNode.style, '');
     }
-    const currentIndex = getIndexByDelta.call(this, e);
+    const currentIndex = this.getIndexByDelta(e);
+    console.log('end currentIndex:', currentIndex);
     let finalIndex = this.startIndex;
     if (currentIndex !== undefined) {
       if (currentIndex < 0) {
@@ -145,30 +156,16 @@ const SwipeableTabContent = createReactClass({
     } else {
       this.props.onChange(getActiveKey(this.props.children, finalIndex));
     }
-  },
+  }
   render() {
-    const { tabBarPosition, hammerOptions, animated } = this.props;
-    let events = {
-      onSwipe: this.onSwipe,
-      onPanStart: this.onPanStart,
-    };
-    if (animated !== false) {
-      events = {
-        ...events,
-        onPan: this.onPan,
-        onPanEnd: this.onPanEnd,
-      };
-    }
     return (
-      <Hammer
-        {...events}
-        direction={isVertical(tabBarPosition) ? 'DIRECTION_ALL' : 'DIRECTION_HORIZONTAL'}
-        options={hammerOptions}
+      <div
+        onTouchStart={this.handleStart}
+        onTouchMove={this.handleMove}
+        onTouchEnd={this.handleEnd}
       >
         <TabContent {...this.props}/>
-      </Hammer>
+      </div>
     );
-  },
-});
-
-export default SwipeableTabContent;
+  }
+}
